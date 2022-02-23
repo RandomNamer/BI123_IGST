@@ -3,7 +3,10 @@ import os
 from PyQt5.QtCore import *
 from PyQt5.QtWidgets import *
 
-from ProjectWidget import ProjectWidegt
+from ProjectOneWidget import ProjectOneTabWidget
+from ProjectTwoWidget import ProjectTwoTabWidget
+from ProjectThreeWidget import ProjectThreeTabWidget
+from ProjectFourWidget import ProjectFourTabWidget
 
 openFromDir = "/Users/zzy/Desktop/Image Processing CourseWorks/"
 
@@ -15,7 +18,7 @@ class MainWindow(QMainWindow):
     def __init__(self, parent=None):
         QMainWindow.__init__(self, parent)
 
-        self.resize(1340,1000)
+        self.resize(1140,800)
 
         self.mCentralWidget = QWidget()
         self.setCentralWidget(self.mCentralWidget)
@@ -48,16 +51,16 @@ class MainWindow(QMainWindow):
         self.mainLayout.addWidget(self.tabWidget)
         self.setCentralWidget(self.tabWidget)
 
-        self.project1 = ProjectWidegt(self.updateImgSignal)
+        self.project1 = ProjectOneTabWidget(self.updateImgSignal)
         self.tabWidget.addTab(self.project1, "")
 
-        self.project2 = ProjectWidegt(self.updateImgSignal)
+        self.project2 = ProjectTwoTabWidget(self.updateImgSignal)
         self.tabWidget.addTab(self.project2, "")
 
-        self.project3 = ProjectWidegt(self.updateImgSignal)
+        self.project3 = ProjectThreeTabWidget(self.updateImgSignal)
         self.tabWidget.addTab(self.project3, "")
 
-        self.project4 = ProjectWidegt(self.updateImgSignal)
+        self.project4 = ProjectFourTabWidget(self.updateImgSignal)
         self.tabWidget.addTab(self.project4, "")
 
 
@@ -69,7 +72,7 @@ class MainWindow(QMainWindow):
         self.show()
 
     def openFileHandler(self):
-        imgPath, ftype = QFileDialog.getOpenFileName(self, "Open File", openFromDir, "*.dcm")
+        imgPath, ftype = QFileDialog.getOpenFileName(self, "Open File", openFromDir, "*.dcm;*.png;*.tif")
         # imgPath = r'E:/Image Processing CourseWorks/Image Processing CourseWorks/lab1/1091.dcm'
 
         if os.path.isdir(imgPath): return

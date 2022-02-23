@@ -5,7 +5,7 @@ from util import *
 import time
 
 
-class ProjectWidegt(QFrame):
+class ProjectOneTabWidget(QFrame):
     calSignal = pyqtSignal()
     filePath = ""
 
@@ -23,7 +23,7 @@ class ProjectWidegt(QFrame):
         self.labelList = QFrame(self)
         self.hLayout.addWidget(self.labelList)
         self.labelList.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Expanding)
-        self.labelList.setFixedWidth(400)
+        self.labelList.setFixedWidth(340)
         self.labelList.setFrameShape(QFrame.StyledPanel)
         self.labelList.setFrameShadow(QFrame.Plain)
 
@@ -43,7 +43,6 @@ class ProjectWidegt(QFrame):
         font.setBold(True)
         font.setWeight(75)
         self.label_1.setFont(font)
-        self.label_1.setAlignment(Qt.AlignHCenter | Qt.AlignTop)
 
         self.label_2 = QLabel()
         self.label_2.setText("Manual Thresholding")
@@ -55,7 +54,6 @@ class ProjectWidegt(QFrame):
         font.setBold(True)
         font.setWeight(75)
         self.label_2.setFont(font)
-        self.label_2.setAlignment(Qt.AlignHCenter | Qt.AlignTop)
 
         self.threshSliderIndicator = QLabel()
         self.threshSliderIndicator.setText("Current Value:")
@@ -83,9 +81,27 @@ class ProjectWidegt(QFrame):
 
         self.radio_2 = QRadioButton()
         self.radio_2.setText("Entropy")
+        s = QSlider()
+        s.setMinimum(0)
+        s.setMaximum(10)
+        s.setTickInterval(1)
+        s.setOrientation(Qt.Horizontal)
+        self.entropySlider = s
+        self.entropySliderIndicator = QLabel()
+        self.entropySliderIndicator.setText("Entropy Segmentation Level:")
+        self.entropySliderValueLayout = QHBoxLayout()
+        self.entropySliderMin = QLabel(self.labelList)
+        self.entropySliderMin.setText("0.0")
+        self.entropySliderMax = QLabel(self.labelList)
+        self.entropySliderMax.setText("1.0")
+        self.entropySliderMax.setAlignment(Qt.AlignRight | Qt.AlignTrailing | Qt.AlignVCenter)
+        self.entropySliderValueLayout.addWidget(self.entropySliderMin)
+        self.entropySliderValueLayout.addWidget(self.entropySliderMax)
+
+
 
         self.button = QPushButton()
-        self.button.setStyleSheet("background-color:rgb(200,200,255);")
+        self.button.setStyleSheet("margin: auto 12px; padding: 4px; background-color:rgb(200,200,255);")
         self.button.setText("Calculate")
 
         self.label_6 = QLabel()
@@ -97,14 +113,17 @@ class ProjectWidegt(QFrame):
         self.vSpacer = QSpacerItem(20, 20, QSizePolicy.Minimum, QSizePolicy.Expanding)
 
         # 收敛功能
-        self.labelListLayout.addWidget(self.label_1)
-        self.labelListLayout.addWidget(self.label_2)
+        self.labelListLayout.addWidget(self.label_1, alignment=Qt.AlignHCenter |  Qt.AlignTop)
+        self.labelListLayout.addWidget(self.label_2, alignment=Qt.AlignHCenter |  Qt.AlignTop)
         self.labelListLayout.addWidget(self.threshSliderIndicator)
         self.labelListLayout.addWidget(self.threshSlider)
         self.labelListLayout.addLayout(self.threshSliderValueLayout)
         self.labelListLayout.addWidget(self.label_5)
         self.labelListLayout.addWidget(self.radio_1)
         self.labelListLayout.addWidget(self.radio_2)
+        self.labelListLayout.addWidget(self.entropySliderIndicator)
+        self.labelListLayout.addWidget(self.entropySlider)
+        self.labelListLayout.addLayout(self.entropySliderValueLayout)
         self.labelListLayout.addWidget(self.button)
         self.labelListLayout.addWidget(self.label_6)
         self.labelListLayout.addItem(self.vSpacer)
@@ -158,7 +177,10 @@ class ProjectWidegt(QFrame):
         self.manualThresholdReady = False
         self.imageArrayReady = False
         self.histogramReady = False
-        self.imageArray = readFromDicomAndNormalize(filePath);
+        if filePath.endswith("dcm"):
+            self.imageArray = readFromDicomAndNormalize(filePath);
+        else:
+            self.imageArray = readFromJpgAndNormalize(filePath);
         self.imageArrayReady = True
         qim = np_to_qt(self.imageArray)
         pix = QPixmap.fromImage(qim)
@@ -184,7 +206,7 @@ class ProjectWidegt(QFrame):
         isOtsu = self.radio_1.isChecked()
         isEntropy = self.radio_2.isChecked()
         begin = time.time()
-        print("Start Processing...")
+        print(" Otsu / Entropy")
         if isOtsu:
             threshvalue = otsuThresh(self.imageArray)
             otsuimg = np_to_qt(normalizeBinary(point(self.imageArray, threshvalue)))
@@ -192,23 +214,26 @@ class ProjectWidegt(QFrame):
             pixmap_resized = pix.scaled(self.entropyImg.size(), Qt.KeepAspectRatio)
             self.entropyImg.setPixmap(pixmap_resized)
 
-            self.label_6.setText("Current Value:" + " " + str(threshvalue))
+            self.label_6.setText("Current Otsu Value:" + " " + str(threshvalue))
+            print("Processed Otsu in", time.time() - begin)
+            self.otsuThreshReady = True
         elif isEntropy:
-            threshvalue = otsuThresh(self.imageArray)
-            otsuimg = np_to_qt(normalizeBinary(point(self.imageArray, threshvalue)))
-            pix = QPixmap.fromImage(otsuimg)
+            level = self.entropySlider.value() / 10
+            seg = entropyLevelSeg(self.imageArray, level)
+            img = np_to_qt(seg)
+            pix = QPixmap.fromImage(img)
             pixmap_resized = pix.scaled(self.entropyImg.size(), Qt.KeepAspectRatio)
             self.entropyImg.setPixmap(pixmap_resized)
 
-            self.label_6.setText("Current Value:" + " " + str(threshvalue))
-        print("Processed Otsu in", time.time() - begin)
-        self.otsuThreshReady = True
+            self.label_6.setText("Current Entropy level: " + str(level))
+            print("Processed Entropy in", time.time() - begin)
 
     def threshSliderValueChangedHandler(self):
+        value = self.threshSlider.value()
+        self.threshSliderIndicator.setText("Current Value: " + str(value))
         if not self.imageArrayReady:
             QMessageBox.information(self, "Info", "Select an imag to get started", QMessageBox.Ok)
             return
-        value = self.threshSlider.value()
         start = time.time()
         threshImg = normalizeBinary(point(self.imageArray, value))
         threshImg = np_to_qt(threshImg)
